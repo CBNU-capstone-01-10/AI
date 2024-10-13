@@ -2,8 +2,8 @@ POST http://localhost:9999/detect
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
-Content-Disposition: form-data; name="image"; filename="test_ciggeratte2.jpg"
+Content-Disposition: form-data; name="image"; filename="test_cigarette2.jpg"
 Content-Type: image/jpeg
 
-< ./images/test_ciggeratte2.jpg
+< ./images/test_cigarette2.jpg
 --boundary--

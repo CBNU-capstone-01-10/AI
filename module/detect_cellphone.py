@@ -2,28 +2,26 @@ import cv2
 import os
 from ultralytics import YOLO
 
-model_path = os.path.join('module', 'pretrained', 'yolov8n_cigarette.pt')
+model_path = os.path.join('module', 'pretrained', 'yolov8n.pt')
 model = YOLO(model_path)
 
-def detectCigarette(img, test=False):
+def detectCellphone(img):
     results = model(img)
-    print(f'cigarette res : {results}')
     detected = []
-    
+
     for result in results:
         boxes = result.boxes
         if boxes is not None:
-            xyxy = boxes.xyxy.cpu().numpy()
-            confs = boxes.conf.cpu().numpy()
-            classes = boxes.cls.cpu().numpy().astype(int)
-            
+            xyxy = boxes.xyxy.cpu().numpy()  # Bounding box coordinates
+            confs = boxes.conf.cpu().numpy()  # Confidence scores
+            classes = boxes.cls.cpu().numpy().astype(int)  # Class IDs
+
             for bbox, conf, cls_id in zip(xyxy, confs, classes):
                 class_name = model.names[cls_id]
-                if class_name == 'rokok':
+                if class_name == 'cell phone':
                     detected.append({
-                        'class': 'cigarette',
+                        'class': class_name,
                         'confidence': float(conf),
                         'bbox': bbox.tolist()
                     })
     return detected
-

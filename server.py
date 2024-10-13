@@ -4,7 +4,8 @@ import numpy as np
 from dataclasses import dataclass
 from module.eye import detectFacesAndEyes, checkDrowsiness
 from module.detect_person import detectNearestPerson
-from module.detect_object import detectObjects
+from module.detect_cellphone import detectCellphone
+from module.detect_cigarette import detectCigarette
 
 app = Flask(__name__)
 
@@ -46,8 +47,9 @@ def detect():
     person_img = img[y1:y2, x1:x2].copy()
 
     _, eye_data = detectFacesAndEyes(person_img)
-
-    object_data = detectObjects(person_img)
+    cellphone_data = detectCellphone(person_img)
+    cigarette_data = detectCigarette(person_img)
+    object_data = cellphone_data + cigarette_data
 
     response_data = {
         'person_detected': True,
