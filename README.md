@@ -12,9 +12,9 @@ This API detects a person, objects (like cigarettes and cellphones), and checks 
 Pull the Docker image and run the container:
 
 ```bash
-docker pull hongbeomsun/driver-detection:1.1.0
+docker pull hongbeomsun/driver-detection:1.2.0
 
-docker run -p 9999:9999 --name driver-detection-container hongbeomsun/driver-detection:1.1.0
+docker run -p 9999:9999 --name driver-detection-container hongbeomsun/driver-detection:1.2.0
 ```
 
 This will start the driver detection service on `http://localhost:9999`.
@@ -43,16 +43,27 @@ Content-Type: multipart/form-data
 
 ```json
 {
-  "person_detected": true,
-  "face_detected": false,
-  "drowsy": false,
-  "objects_detected": [
-    {
-      "class": "cigarette",
-      "confidence": 0.847,
-      "bbox": [1256.06, 726.22, 1547.11, 931.78]
-    }
-  ]
+  "detail": {
+    "drowsy": false,
+    "face_detected": false,
+    "objects_detected": [
+      {
+        "bbox": [
+          87.56160736083984,
+          80.62358093261719,
+          227.22669982910156,
+          173.17254638671875
+        ],
+        "class": "cell phone",
+        "confidence": 0.7384440898895264
+      }
+    ],
+    "person_detected": true
+  },
+  "label": [
+    "cell phone"
+  ],
+  "safe_driving": false
 }
 ```
 
