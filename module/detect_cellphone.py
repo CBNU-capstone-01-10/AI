@@ -18,7 +18,7 @@ def detectCellphone(img):
 
             for bbox, conf, cls_id in zip(xyxy, confs, classes):
                 class_name = model.names[cls_id]
-                if class_name == 'cell phone':
+                if class_name == 'cell phone' and float(conf) > 0.65:
                     detected.append({
                         'class': class_name,
                         'confidence': float(conf),

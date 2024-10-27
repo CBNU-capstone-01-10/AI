@@ -50,16 +50,23 @@ def detect():
     cellphone_data = detectCellphone(person_img)
     cigarette_data = detectCigarette(person_img)
     object_data = cellphone_data + cigarette_data
-
+    
     response_data = {
-        'person_detected': True,
-        'face_detected': False,
-        'drowsy': False,
-        'objects_detected': object_data,
+        'safe_driving': True,
+        'label': [],
+        'detail': {
+            'person_detected': True,
+            'face_detected': False,
+            'drowsy': False,
+            'objects_detected': object_data,
+        }
     }
-
+    if object_data:
+        response_data['safe_driving'] = False
+        response_data['label'] = [obj['class'] for obj in object_data]
+        
     if len(eye_data) > 0:
-        response_data['face_detected'] = True
+        response_data['detail']['face_detected'] = True
 
         for left_ear, right_ear, left_eye, right_eye in eye_data:
             avg_ear = (left_ear + right_ear) / 2
@@ -68,13 +75,14 @@ def detect():
                 avg_ear, counter.value, config.EAR_THRESHOLD, config.CONSECUTIVE_FRAMES
             )
 
-            response_data['avg_ear'] = avg_ear
-            response_data['counter'] = counter.value
-            response_data['left_ear'] = left_ear
-            response_data['right_ear'] = right_ear
+            response_data['detail']['avg_ear'] = avg_ear
+            response_data['detail']['counter'] = counter.value
+            response_data['detail']['left_ear'] = left_ear
+            response_data['detail']['right_ear'] = right_ear
 
             if drowsy:
-                response_data['drowsy'] = True
+                response_data['detail']['drowsy'] = True
+                response_data['safe_driving'] = False
 
     return jsonify(response_data), 200
 
