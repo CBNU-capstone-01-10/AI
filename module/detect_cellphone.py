@@ -12,13 +12,13 @@ def detectCellphone(img):
     for result in results:
         boxes = result.boxes
         if boxes is not None:
-            xyxy = boxes.xyxy.cpu().numpy()  # Bounding box coordinates
-            confs = boxes.conf.cpu().numpy()  # Confidence scores
-            classes = boxes.cls.cpu().numpy().astype(int)  # Class IDs
+            xyxy = boxes.xyxy.cpu().numpy()
+            confs = boxes.conf.cpu().numpy() 
+            classes = boxes.cls.cpu().numpy().astype(int)
 
             for bbox, conf, cls_id in zip(xyxy, confs, classes):
                 class_name = model.names[cls_id]
-                if class_name == 'cell phone' and float(conf) > 0.65:
+                if class_name == 'cell phone':
                     detected.append({
                         'class': class_name,
                         'confidence': float(conf),

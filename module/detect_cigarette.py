@@ -19,7 +19,7 @@ def detectCigarette(img, test=False):
             
             for bbox, conf, cls_id in zip(xyxy, confs, classes):
                 class_name = model.names[cls_id]
-                if class_name == 'rokok' and float(conf) > 0.65:
+                if class_name == 'rokok':
                     detected.append({
                         'class': 'cigarette',
                         'confidence': float(conf),
