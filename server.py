@@ -12,21 +12,30 @@ app = Flask(__name__)
 """class"""
 @dataclass
 class Config():
-    EAR_THRESHOLD: float = 0.25
-    CONSECUTIVE_FRAMES: int = 10
+    EAR_THRESHOLD: float = 0.2
+    CONSECUTIVE_FRAMES: int = 3
 
 class Counter:
     def __init__(self):
         self.value = 0
 
-config = Config()
-counter = Counter()
+CONFIG = Config()
+COUNTER = Counter()
 
 """route"""
 @app.route('/detect', methods=['POST'])
 def detect():
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
+    
+    ear_threshold = request.form.get('ear_threshold', type=float)
+    consecutive_frames = request.form.get('consecutive_frames', type=int)
+    
+    if ear_threshold is not None:
+        CONFIG.EAR_THRESHOLD = ear_threshold
+    
+    if consecutive_frames is not None:
+        CONFIG.CONSECUTIVE_FRAMES = consecutive_frames
 
     file = request.files['image']
     file_bytes = np.frombuffer(file.read(), np.uint8)
@@ -71,12 +80,12 @@ def detect():
         for left_ear, right_ear, left_eye, right_eye in eye_data:
             avg_ear = (left_ear + right_ear) / 2
 
-            counter.value, drowsy = checkDrowsiness(
-                avg_ear, counter.value, config.EAR_THRESHOLD, config.CONSECUTIVE_FRAMES
+            COUNTER.value, drowsy = checkDrowsiness(
+                avg_ear, COUNTER.value, CONFIG.EAR_THRESHOLD, CONFIG.CONSECUTIVE_FRAMES
             )
 
             response_data['detail']['avg_ear'] = avg_ear
-            response_data['detail']['counter'] = counter.value
+            response_data['detail']['counter'] = COUNTER.value
             response_data['detail']['left_ear'] = left_ear
             response_data['detail']['right_ear'] = right_ear
 
