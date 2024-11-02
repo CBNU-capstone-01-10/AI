@@ -12,9 +12,9 @@ This API is designed to detect a person, identify objects such as cigarettes and
 To quickly start the API, pull the Docker image and launch the container:
 
 ```bash
-docker pull hongbeomsun/driver-detection:1.2.0
+docker pull hongbeomsun/driver-detection:1.4.0
 
-docker run -p 9999:9999 --name driver-detection-container hongbeomsun/driver-detection:1.2.0
+docker run -p 9999:9999 --name driver-detection-container hongbeomsun/driver-detection:1.4.0
 ```
 
 The API service will start and be accessible at `http://localhost:9999`.
