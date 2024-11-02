@@ -15,21 +15,20 @@ def detectFacesAndEyes(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
 
-    eye_data = []
+    face = faces[0]
+    
+    shape = predictor(gray, face)
+    shape = face_utils.shape_to_np(shape)
 
-    for face in faces:
-        shape = predictor(gray, face)
-        shape = face_utils.shape_to_np(shape)
+    left_eye = shape[lStart:lEnd]
+    right_eye = shape[rStart:rEnd]
 
-        left_eye = shape[lStart:lEnd]
-        right_eye = shape[rStart:rEnd]
+    left_ear = eyeAspectRatio(left_eye)
+    right_ear = eyeAspectRatio(right_eye)
 
-        left_ear = eyeAspectRatio(left_eye)
-        right_ear = eyeAspectRatio(right_eye)
+    avg_ear = (left_ear + right_ear) / 2
 
-        avg_ear = (left_ear + right_ear) / 2
-
-        eye_data.append((left_ear, right_ear, left_eye, right_eye))
+    eye_data = (avg_ear, left_ear, right_ear, left_eye, right_eye)
 
     return img, eye_data
 
@@ -41,13 +40,8 @@ def eyeAspectRatio(eye):
     EAR = (A + B) / (2.0 * C)
     return EAR
 
-def checkDrowsiness(ear, counter, ear_threshold, frame_count):
-    drowsy = False
+def checkDrowsiness(ear, counter, ear_threshold):
     if ear < ear_threshold:
-        counter += 1
-        if counter >= frame_count:
-            drowsy = True
-    else:
-        counter = 0
+        return True
 
-    return counter, drowsy
+    return False

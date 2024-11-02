@@ -13,7 +13,8 @@ app = Flask(__name__)
 @dataclass
 class Config():
     EAR_THRESHOLD: float = 0.2
-    CONSECUTIVE_FRAMES: int = 3
+    CONSECUTIVE_DROWSY_FRAMES: int = 2
+    CONSECUTIVE_OBJECT_FRAMES: int = 1
     OBJECT_CONFIDENCE: float = 0.5
 
 class Counter:
@@ -50,14 +51,18 @@ def detect():
         return jsonify({'error': 'No image provided'}), 400
     
     ear_threshold = request.form.get('ear_threshold', type=float)
-    consecutive_frames = request.form.get('consecutive_frames', type=int)
+    consecutive_drowsy_frames = request.form.get('consecutive_drowsy_frames', type=int)
+    consecutive_object_frames = request.form.get('consecutive_object_frames', type=int)
     object_confidence = request.form.get('object_confidence', type=float)
     
     if ear_threshold is not None:
         CONFIG.EAR_THRESHOLD = ear_threshold
     
-    if consecutive_frames is not None:
-        CONFIG.CONSECUTIVE_FRAMES = consecutive_frames
+    if consecutive_drowsy_frames is not None:
+        CONFIG.CONSECUTIVE_DROWSY_FRAMES = consecutive_drowsy_frames
+        
+    if consecutive_object_frames is not None:
+        CONFIG.CONSECUTIVE_OBJECT_FRAMES = consecutive_object_frames
 
     if object_confidence is not None:
         CONFIG.OBJECT_CONFIDENCE = object_confidence
@@ -124,40 +129,39 @@ def detect():
     if not cigarette_detected:
         COUNTER.reset_cigarette()
     
-    if COUNTER.cellphone_value > CONFIG.CONSECUTIVE_FRAMES:
+    if COUNTER.cellphone_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
         response_data['label'].append('cellphone')
         response_data['safe_driving'] = False
         
-    if COUNTER.cigarette_value > CONFIG.CONSECUTIVE_FRAMES:
+    if COUNTER.cigarette_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
         response_data['label'].append('cigarette')
         response_data['safe_driving'] = False
         
-    ### Face
-    
-    if len(eye_data) > 0:
+    ### Eye
+    if eye_data:
         response_data['detail']['face_detected'] = True
 
-        for left_ear, right_ear, left_eye, right_eye in eye_data:
-            avg_ear = (left_ear + right_ear) / 2
+        avg_ear, left_ear, right_ear, left_eye, right_eye = eye_data
 
-            COUNTER.drowsy_value, drowsy = checkDrowsiness(
-                avg_ear, COUNTER.drowsy_value, CONFIG.EAR_THRESHOLD, CONFIG.CONSECUTIVE_FRAMES
-            )
-
-            response_data['detail']['avg_ear'] = avg_ear
-            response_data['detail']['counter'] = COUNTER.drowsy_value
-            response_data['detail']['left_ear'] = left_ear
-            response_data['detail']['right_ear'] = right_ear
-
-            if drowsy:
-                COUNTER.increment_drowsy()
-                drowsy_detected = True
-                response_data['detail']['drowsy'] = True
-                response_data['safe_driving'] = False
+        drowsy_detected = checkDrowsiness(
+            avg_ear, COUNTER.drowsy_value, CONFIG.EAR_THRESHOLD
+        )
+        
+        if drowsy_detected:
+            COUNTER.increment_drowsy()
+            
+        if COUNTER.drowsy_value > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
+            drowsy = True
+            response_data['detail']['drowsy'] = drowsy
+            response_data['safe_driving'] = False
 
         response_data['detail']['drowsy_count'] = COUNTER.drowsy_value
-
-    if not drowsy_detected:
+        response_data['detail']['avg_ear'] = avg_ear
+        response_data['detail']['left_ear'] = left_ear
+        response_data['detail']['right_ear'] = right_ear
+        
+    print(drowsy_detected)
+    if drowsy_detected == False:
         COUNTER.reset_drowsy()
 
     return jsonify(response_data), 200
