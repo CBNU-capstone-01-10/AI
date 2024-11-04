@@ -13,8 +13,8 @@ app = Flask(__name__)
 @dataclass
 class Config():
     EAR_THRESHOLD: float = 0.2
-    CONSECUTIVE_DROWSY_FRAMES: int = 3
-    CONSECUTIVE_OBJECT_FRAMES: int = 2
+    CONSECUTIVE_DROWSY_FRAMES: int = 2
+    CONSECUTIVE_OBJECT_FRAMES: int = 1
     OBJECT_CONFIDENCE: float = 0.6
 
 class Counter:
