@@ -13,9 +13,9 @@ app = Flask(__name__)
 @dataclass
 class Config():
     EAR_THRESHOLD: float = 0.2
-    CONSECUTIVE_DROWSY_FRAMES: int = 2
-    CONSECUTIVE_OBJECT_FRAMES: int = 1
-    OBJECT_CONFIDENCE: float = 0.5
+    CONSECUTIVE_DROWSY_FRAMES: int = 3
+    CONSECUTIVE_OBJECT_FRAMES: int = 2
+    OBJECT_CONFIDENCE: float = 0.6
 
 class Counter:
     def __init__(self):
@@ -88,10 +88,9 @@ def detect():
     person_img = img[y1:y2, x1:x2].copy()
     
     ## Ready Data
-
     _, eye_data = detectFacesAndEyes(person_img)
-    cellphone_data = detectCellphone(person_img)
-    cigarette_data = detectCigarette(person_img)
+    cellphone_data = detectCellphone(img)
+    cigarette_data = detectCigarette(img)
     object_data = cellphone_data + cigarette_data
     
     cellphone_detected = False
@@ -113,20 +112,19 @@ def detect():
     
     for obj in object_data:
         if (obj['class'] == 'cellphone') and (obj['confidence'] > CONFIG.OBJECT_CONFIDENCE):
-            COUNTER.increment_cellphone()
             cellphone_detected = True
         
         if (obj['class'] == 'cigarette') and (obj['confidence'] > CONFIG.OBJECT_CONFIDENCE):
-            COUNTER.increment_cigarette()
             cigarette_detected = True
     
-    response_data['detail']['cellphone_count'] = COUNTER.cellphone_value
-    response_data['detail']['cigarette_count'] = COUNTER.cigarette_value
-    
-    if not cellphone_detected:
+    if cellphone_detected:
+        COUNTER.increment_cellphone()
+    else:
         COUNTER.reset_cellphone()
     
-    if not cigarette_detected:
+    if cigarette_detected:
+        COUNTER.increment_cigarette()
+    else:
         COUNTER.reset_cigarette()
     
     if COUNTER.cellphone_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
@@ -136,6 +134,9 @@ def detect():
     if COUNTER.cigarette_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
         response_data['label'].append('cigarette')
         response_data['safe_driving'] = False
+        
+    response_data['detail']['cellphone_count'] = COUNTER.cellphone_value
+    response_data['detail']['cigarette_count'] = COUNTER.cigarette_value
         
     ### Eye
     if eye_data:
@@ -160,7 +161,6 @@ def detect():
         response_data['detail']['left_ear'] = left_ear
         response_data['detail']['right_ear'] = right_ear
         
-    print(drowsy_detected)
     if drowsy_detected == False:
         COUNTER.reset_drowsy()
 

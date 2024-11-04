@@ -20,7 +20,7 @@ def detectCellphone(img):
                 class_name = model.names[cls_id]
                 if class_name == 'cell phone':
                     detected.append({
-                        'class': class_name,
+                        'class': 'cellphone',
                         'confidence': float(conf),
                         'bbox': bbox.tolist()
                     })

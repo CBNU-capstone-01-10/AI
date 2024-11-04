@@ -7,7 +7,6 @@ model = YOLO(model_path)
 
 def detectCigarette(img, test=False):
     results = model(img)
-    print(f'cigarette res : {results}')
     detected = []
     
     for result in results:

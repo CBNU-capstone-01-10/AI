@@ -14,7 +14,10 @@ predictor = dlib.shape_predictor(os.path.join('module', 'pretrained', 'shape_pre
 def detectFacesAndEyes(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
-
+    
+    if len(faces) == 0:
+        return img, None
+    
     face = faces[0]
     
     shape = predictor(gray, face)
