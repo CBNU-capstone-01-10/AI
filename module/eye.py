@@ -43,7 +43,7 @@ def eyeAspectRatio(eye):
     EAR = (A + B) / (2.0 * C)
     return EAR
 
-def checkDrowsiness(ear, counter, ear_threshold):
+def checkDrowsiness(ear, ear_threshold):
     if ear < ear_threshold:
         return True
 

@@ -145,16 +145,11 @@ def detect():
         avg_ear, left_ear, right_ear, left_eye, right_eye = eye_data
 
         drowsy_detected = checkDrowsiness(
-            avg_ear, COUNTER.drowsy_value, CONFIG.EAR_THRESHOLD
+            avg_ear, CONFIG.EAR_THRESHOLD
         )
         
         if drowsy_detected:
             COUNTER.increment_drowsy()
-            
-        if COUNTER.drowsy_value > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
-            drowsy = True
-            response_data['detail']['drowsy'] = drowsy
-            response_data['safe_driving'] = False
 
         response_data['detail']['drowsy_count'] = COUNTER.drowsy_value
         response_data['detail']['avg_ear'] = avg_ear
@@ -163,6 +158,12 @@ def detect():
         
     if drowsy_detected == False:
         COUNTER.reset_drowsy()
+        
+    if COUNTER.drowsy_value > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
+        drowsy = True
+        response_data['detail']['drowsy'] = drowsy
+        response_data['label'].append('drowsy')
+        response_data['safe_driving'] = False
 
     return jsonify(response_data), 200
 
