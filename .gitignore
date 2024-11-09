@@ -15,6 +15,7 @@ Dataset
 dataset
 model
 huge
+training/
 
 .venv/
 saver/

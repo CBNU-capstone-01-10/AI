@@ -15,7 +15,9 @@ class Config():
     EAR_THRESHOLD: float = 0.2
     CONSECUTIVE_DROWSY_FRAMES: int = 2
     CONSECUTIVE_OBJECT_FRAMES: int = 1
-    OBJECT_CONFIDENCE: float = 0.6
+    
+    OBJECT_CELLPHONE_CONF:float = 0.5
+    OBJECT_CIGARETTE_CONF:float = 0.7
 
 class Counter:
     def __init__(self):
@@ -44,6 +46,10 @@ class Counter:
 CONFIG = Config()
 COUNTER = Counter()
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({'error': str(e)}), 500
+
 """route"""
 @app.route('/detect', methods=['POST'])
 def detect():
@@ -53,7 +59,8 @@ def detect():
     ear_threshold = request.form.get('ear_threshold', type=float)
     consecutive_drowsy_frames = request.form.get('consecutive_drowsy_frames', type=int)
     consecutive_object_frames = request.form.get('consecutive_object_frames', type=int)
-    object_confidence = request.form.get('object_confidence', type=float)
+    object_cellphone_conf = request.form.get('object_cellphone_conf', type=float)
+    object_cigarette_conf = request.form.get('object_cigarette_conf', type=float)
     
     if ear_threshold is not None:
         CONFIG.EAR_THRESHOLD = ear_threshold
@@ -64,8 +71,11 @@ def detect():
     if consecutive_object_frames is not None:
         CONFIG.CONSECUTIVE_OBJECT_FRAMES = consecutive_object_frames
 
-    if object_confidence is not None:
-        CONFIG.OBJECT_CONFIDENCE = object_confidence
+    if object_cellphone_conf is not None:
+        CONFIG.OBJECT_CELLPHONE_CONF = object_cellphone_conf
+        
+    if object_cigarette_conf is not None:
+        CONFIG.OBJECT_CIGARETTE_CONF = object_cigarette_conf
 
     file = request.files['image']
     file_bytes = np.frombuffer(file.read(), np.uint8)
@@ -111,10 +121,10 @@ def detect():
     ### Obj
     
     for obj in object_data:
-        if (obj['class'] == 'cellphone') and (obj['confidence'] > CONFIG.OBJECT_CONFIDENCE):
+        if (obj['class'] == 'cellphone') and (obj['confidence'] > CONFIG.OBJECT_CELLPHONE_CONF):
             cellphone_detected = True
         
-        if (obj['class'] == 'cigarette') and (obj['confidence'] > CONFIG.OBJECT_CONFIDENCE):
+        if (obj['class'] == 'cigarette') and (obj['confidence'] > CONFIG.OBJECT_CIGARETTE_CONF):
             cigarette_detected = True
     
     if cellphone_detected:

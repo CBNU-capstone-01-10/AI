@@ -2,7 +2,7 @@ import cv2
 import os
 from ultralytics import YOLO
 
-model_path = os.path.join('module', 'pretrained', 'yolov8n.pt')
+model_path = os.path.join('module', 'pretrained', 'yolov8s_phone.pt')
 model = YOLO(model_path)
 
 def detectCellphone(img):
@@ -11,6 +11,7 @@ def detectCellphone(img):
 
     for result in results:
         boxes = result.boxes
+        print(boxes)
         if boxes is not None:
             xyxy = boxes.xyxy.cpu().numpy()
             confs = boxes.conf.cpu().numpy() 
@@ -18,7 +19,7 @@ def detectCellphone(img):
 
             for bbox, conf, cls_id in zip(xyxy, confs, classes):
                 class_name = model.names[cls_id]
-                if class_name == 'cell phone':
+                if class_name == 'phone':
                     detected.append({
                         'class': 'cellphone',
                         'confidence': float(conf),
