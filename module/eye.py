@@ -4,7 +4,6 @@ import dlib
 from scipy.spatial import distance
 from imutils import face_utils
 
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(os.path.join('module', 'pretrained', 'shape_predictor_68_face_landmarks.dat'))
 

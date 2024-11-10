@@ -17,7 +17,7 @@ class Config():
     CONSECUTIVE_OBJECT_FRAMES: int = 1
     
     OBJECT_CELLPHONE_CONF:float = 0.5
-    OBJECT_CIGARETTE_CONF:float = 0.7
+    OBJECT_CIGARETTE_CONF:float = 0.6
 
 class Counter:
     def __init__(self):
@@ -80,25 +80,9 @@ def detect():
     file = request.files['image']
     file_bytes = np.frombuffer(file.read(), np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
-    ### Person
     
-    person_detection = detectNearestPerson(img)
-
-    if not person_detection['person_detected']:
-        return jsonify({'person_detected': False}), 200
-
-    x1, y1, x2, y2 = map(int, person_detection['bbox'])
-    
-    height, width = img.shape[:2]
-    x1 = max(0, x1)
-    y1 = max(0, y1)
-    x2 = min(width, x2)
-    y2 = min(height, y2)
-    person_img = img[y1:y2, x1:x2].copy()
-    
-    ## Ready Data
-    _, eye_data = detectFacesAndEyes(person_img)
+    ### Ready Data
+    _, eye_data = detectFacesAndEyes(img)
     cellphone_data = detectCellphone(img)
     cigarette_data = detectCigarette(img)
     object_data = cellphone_data + cigarette_data
@@ -111,7 +95,6 @@ def detect():
         'safe_driving': True,
         'label': [],
         'detail': {
-            'person_detected': True,
             'face_detected': False,
             'drowsy': False,
             'objects_detected': object_data,
@@ -119,7 +102,6 @@ def detect():
     }
     
     ### Obj
-    
     for obj in object_data:
         if (obj['class'] == 'cellphone') and (obj['confidence'] > CONFIG.OBJECT_CELLPHONE_CONF):
             cellphone_detected = True
