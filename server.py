@@ -6,6 +6,7 @@ from module.eye import detectFacesAndEyes, checkDrowsiness
 from module.detect_person import detectNearestPerson
 from module.detect_cellphone import detectCellphone
 from module.detect_cigarette import detectCigarette
+from threading import Lock
 
 app = Flask(__name__)
 
@@ -16,35 +17,51 @@ class Config():
     CONSECUTIVE_DROWSY_FRAMES: int = 2
     CONSECUTIVE_OBJECT_FRAMES: int = 1
     
-    OBJECT_CELLPHONE_CONF:float = 0.6
-    OBJECT_CIGARETTE_CONF:float = 0.6
+    OBJECT_CELLPHONE_CONF: float = 0.6
+    OBJECT_CIGARETTE_CONF: float = 0.6
 
 class Counter:
     def __init__(self):
         self.drowsy_value = 0
         self.cigarette_value = 0
         self.cellphone_value = 0
+        self.lock = Lock()
 
     def increment_drowsy(self):
-        self.drowsy_value += 1
+        with self.lock:
+            self.drowsy_value += 1
 
     def increment_cigarette(self):
-        self.cigarette_value += 1
+        with self.lock:
+            self.cigarette_value += 1
 
     def increment_cellphone(self):
-        self.cellphone_value += 1
-    
+        with self.lock:
+            self.cellphone_value += 1
+        
     def reset_drowsy(self):
-        self.drowsy_value = 0
-    
+        with self.lock:
+            self.drowsy_value = 0
+        
     def reset_cigarette(self):
-        self.cigarette_value = 0
-    
+        with self.lock:
+            self.cigarette_value = 0
+        
     def reset_cellphone(self):
-        self.cellphone_value = 0
+        with self.lock:
+            self.cellphone_value = 0
+
+    def get_values(self):
+        with self.lock:
+            return {
+                'drowsy_value': self.drowsy_value,
+                'cigarette_value': self.cigarette_value,
+                'cellphone_value': self.cellphone_value
+            }
 
 CONFIG = Config()
-COUNTER = Counter()
+COUNTERS_LOCK = Lock()
+COUNTERS = {}
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -53,7 +70,18 @@ def handle_exception(e):
 """route"""
 @app.route('/detect', methods=['POST'])
 def detect():
+    if 'user_id' not in request.form:
+        print('error : No user_id provided')
+        return jsonify({'error': 'No user_id provided'}), 400
+    user_id = request.form.get('user_id')
+
+    with COUNTERS_LOCK:
+        if user_id not in COUNTERS:
+            COUNTERS[user_id] = Counter()
+        counter = COUNTERS[user_id]
+    
     if 'image' not in request.files:
+        print('error : No image provided')
         return jsonify({'error': 'No image provided'}), 400
     
     ear_threshold = request.form.get('ear_threshold', type=float)
@@ -92,6 +120,7 @@ def detect():
     drowsy_detected = False
 
     response_data = {
+        'user_id': user_id,
         'safe_driving': True,
         'label': [],
         'detail': {
@@ -110,25 +139,27 @@ def detect():
             cigarette_detected = True
     
     if cellphone_detected:
-        COUNTER.increment_cellphone()
+        counter.increment_cellphone()
     else:
-        COUNTER.reset_cellphone()
+        counter.reset_cellphone()
     
     if cigarette_detected:
-        COUNTER.increment_cigarette()
+        counter.increment_cigarette()
     else:
-        COUNTER.reset_cigarette()
+        counter.reset_cigarette()
     
-    if COUNTER.cellphone_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
+    values = counter.get_values()
+
+    if values['cellphone_value'] > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
         response_data['label'].append('cellphone')
         response_data['safe_driving'] = False
         
-    if COUNTER.cigarette_value > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
+    if values['cigarette_value'] > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
         response_data['label'].append('cigarette')
         response_data['safe_driving'] = False
         
-    response_data['detail']['cellphone_count'] = COUNTER.cellphone_value
-    response_data['detail']['cigarette_count'] = COUNTER.cigarette_value
+    response_data['detail']['cellphone_count'] = values['cellphone_value']
+    response_data['detail']['cigarette_count'] = values['cigarette_value']
         
     ### Eye
     if eye_data:
@@ -141,17 +172,18 @@ def detect():
         )
         
         if drowsy_detected:
-            COUNTER.increment_drowsy()
+            counter.increment_drowsy()
 
-        response_data['detail']['drowsy_count'] = COUNTER.drowsy_value
+        response_data['detail']['drowsy_count'] = values['drowsy_value']
         response_data['detail']['avg_ear'] = avg_ear
         response_data['detail']['left_ear'] = left_ear
         response_data['detail']['right_ear'] = right_ear
         
-    if drowsy_detected == False:
-        COUNTER.reset_drowsy()
+    if not drowsy_detected:
+        counter.reset_drowsy()
         
-    if COUNTER.drowsy_value > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
+    values = counter.get_values()
+    if values['drowsy_value'] > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
         drowsy = True
         response_data['detail']['drowsy'] = drowsy
         response_data['label'].append('drowsy')
