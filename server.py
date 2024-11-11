@@ -16,7 +16,7 @@ class Config():
     CONSECUTIVE_DROWSY_FRAMES: int = 2
     CONSECUTIVE_OBJECT_FRAMES: int = 1
     
-    OBJECT_CELLPHONE_CONF:float = 0.5
+    OBJECT_CELLPHONE_CONF:float = 0.6
     OBJECT_CIGARETTE_CONF:float = 0.6
 
 class Counter:
