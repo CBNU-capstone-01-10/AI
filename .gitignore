@@ -22,3 +22,5 @@ saver/
 __pycache__/
 
 tmp/
+
+*.log

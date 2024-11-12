@@ -7,6 +7,18 @@ from module.detect_person import detectNearestPerson
 from module.detect_cellphone import detectCellphone
 from module.detect_cigarette import detectCigarette
 from threading import Lock
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s:%(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 
 app = Flask(__name__)
 
@@ -17,8 +29,8 @@ class Config():
     CONSECUTIVE_DROWSY_FRAMES: int = 2
     CONSECUTIVE_OBJECT_FRAMES: int = 1
     
-    OBJECT_CELLPHONE_CONF: float = 0.6
-    OBJECT_CIGARETTE_CONF: float = 0.6
+    OBJECT_CELLPHONE_CONF: float = 0.5
+    OBJECT_CIGARETTE_CONF: float = 0.7
 
 class Counter:
     def __init__(self):
@@ -65,13 +77,15 @@ COUNTERS = {}
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    logging.exception(f"An unhandled exception occurred : {e}")
     return jsonify({'error': str(e)}), 500
 
 """route"""
 @app.route('/detect', methods=['POST'])
 def detect():
     if 'user_id' not in request.form:
-        print('error : No user_id provided')
+        logging.debug(f'Request form: {request.form}')
+        logging.error('No user_id provided')
         return jsonify({'error': 'No user_id provided'}), 400
     user_id = request.form.get('user_id')
 
@@ -81,36 +95,22 @@ def detect():
         counter = COUNTERS[user_id]
     
     if 'image' not in request.files:
-        print('error : No image provided')
+        logging.debug(f'Request form: {request.form}')
+        logging.error('No image provided')
         return jsonify({'error': 'No image provided'}), 400
     
-    ear_threshold = request.form.get('ear_threshold', type=float)
-    consecutive_drowsy_frames = request.form.get('consecutive_drowsy_frames', type=int)
-    consecutive_object_frames = request.form.get('consecutive_object_frames', type=int)
-    object_cellphone_conf = request.form.get('object_cellphone_conf', type=float)
-    object_cigarette_conf = request.form.get('object_cigarette_conf', type=float)
-    
-    if ear_threshold is not None:
-        CONFIG.EAR_THRESHOLD = ear_threshold
-    
-    if consecutive_drowsy_frames is not None:
-        CONFIG.CONSECUTIVE_DROWSY_FRAMES = consecutive_drowsy_frames
-        
-    if consecutive_object_frames is not None:
-        CONFIG.CONSECUTIVE_OBJECT_FRAMES = consecutive_object_frames
-
-    if object_cellphone_conf is not None:
-        CONFIG.OBJECT_CELLPHONE_CONF = object_cellphone_conf
-        
-    if object_cigarette_conf is not None:
-        CONFIG.OBJECT_CIGARETTE_CONF = object_cigarette_conf
+    ear_threshold = request.form.get('ear_threshold', type=float) or CONFIG.EAR_THRESHOLD
+    consecutive_drowsy_frames = request.form.get('consecutive_drowsy_frames', type=int) or CONFIG.CONSECUTIVE_DROWSY_FRAMES
+    consecutive_object_frames = request.form.get('consecutive_object_frames', type=int) or CONFIG.CONSECUTIVE_OBJECT_FRAMES
+    object_cellphone_conf = request.form.get('object_cellphone_conf', type=float) or CONFIG.OBJECT_CELLPHONE_CONF
+    object_cigarette_conf = request.form.get('object_cigarette_conf', type=float) or CONFIG.OBJECT_CIGARETTE_CONF
 
     file = request.files['image']
     file_bytes = np.frombuffer(file.read(), np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     
     ### Ready Data
-    _, eye_data = detectFacesAndEyes(img)
+    eye_data = detectFacesAndEyes(img)
     cellphone_data = detectCellphone(img)
     cigarette_data = detectCigarette(img)
     object_data = cellphone_data + cigarette_data
@@ -132,10 +132,10 @@ def detect():
     
     ### Obj
     for obj in object_data:
-        if (obj['class'] == 'cellphone') and (obj['confidence'] > CONFIG.OBJECT_CELLPHONE_CONF):
+        if (obj['class'] == 'cellphone') and (obj['confidence'] > object_cellphone_conf):
             cellphone_detected = True
         
-        if (obj['class'] == 'cigarette') and (obj['confidence'] > CONFIG.OBJECT_CIGARETTE_CONF):
+        if (obj['class'] == 'cigarette') and (obj['confidence'] > object_cigarette_conf):
             cigarette_detected = True
     
     if cellphone_detected:
@@ -150,11 +150,11 @@ def detect():
     
     values = counter.get_values()
 
-    if values['cellphone_value'] > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
+    if values['cellphone_value'] > consecutive_object_frames:
         response_data['label'].append('cellphone')
         response_data['safe_driving'] = False
         
-    if values['cigarette_value'] > CONFIG.CONSECUTIVE_OBJECT_FRAMES:
+    if values['cigarette_value'] > consecutive_object_frames:
         response_data['label'].append('cigarette')
         response_data['safe_driving'] = False
         
@@ -162,13 +162,14 @@ def detect():
     response_data['detail']['cigarette_count'] = values['cigarette_value']
         
     ### Eye
-    if eye_data:
+    logging.debug(f'eye_data : {eye_data}')
+    if eye_data:    
         response_data['detail']['face_detected'] = True
 
         avg_ear, left_ear, right_ear, left_eye, right_eye = eye_data
 
         drowsy_detected = checkDrowsiness(
-            avg_ear, CONFIG.EAR_THRESHOLD
+            avg_ear, ear_threshold
         )
         
         if drowsy_detected:
@@ -183,7 +184,7 @@ def detect():
         counter.reset_drowsy()
         
     values = counter.get_values()
-    if values['drowsy_value'] > CONFIG.CONSECUTIVE_DROWSY_FRAMES:
+    if values['drowsy_value'] > consecutive_drowsy_frames:
         drowsy = True
         response_data['detail']['drowsy'] = drowsy
         response_data['label'].append('drowsy')
